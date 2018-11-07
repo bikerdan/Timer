@@ -55,13 +55,10 @@ function handleKeypress(e) {
     console.log("Keypressed: "+e.key+" - Current state: "+current_state)
     if (e.key == "Enter") {
         if (current_state == states.running) {
-            console.log("HERE1")
             stopTimer();
         } else if (current_state == states.done || current_state == states.initial) {
-            console.log("HERE2")
             startTimer()
         } else {
-            console.log("HERE3")
             resumeTimer();
         }
     }
