@@ -5,7 +5,8 @@ const {TouchBarLabel, TouchBarButton, TouchBarSpacer} = TouchBar
 const default_msg = "00:00:00"
 const done_msg = "DONE!!!!"
 
-var currentTimerDate = undefined;
+var current_timer_date = undefined;
+var stopped_timer_remaining_millis = undefined;
 var timer = undefined;
 var states = {
     "initial": 0,
@@ -21,10 +22,11 @@ $(document).ready(function(){
 })
 
 function initHandlers() {
-    $("#btnStartNewTimer").click(updateCurrentTimerDate)
-    $("#btnStopTimer").click(stopTimer)
+    $("#btnStartNewTimer").click(handleStartTimerButtonClick)
+    $("#btnStopTimer").click(handleStopTimerButtonClick)
     $(document).keypress(handleKeypress)
     app.on('browser-window-blur', handleWindowBlur)
+    app.on('browser-window-focus', handleWindowFocus)
 }
 
 function handleWindowBlur(event, window) {
@@ -34,23 +36,66 @@ function handleWindowBlur(event, window) {
     }
 }
 
+function handleWindowFocus(event, window) {
+    $("#txtStartTimerInput").focus(); 
+    $("#txtStartTimerInput").select(); 
+}
+
+function handleStartTimerButtonClick(event, window) {
+    startTimer();
+    $("#btnStartNewTimer").blur();
+}
+
+function handleStopTimerButtonClick(event, window) {
+    stopTimer();
+    $("#btnStopTimer").blur();
+}
+
 function handleKeypress(e) {
-    console.log("Keypressed: "+e.key)
+    console.log("Keypressed: "+e.key+" - Current state: "+current_state)
     if (e.key == "Enter") {
-        updateCurrentTimerDate();
+        if (current_state == states.running) {
+            console.log("HERE1")
+            stopTimer();
+        } else if (current_state == states.done || current_state == states.initial) {
+            console.log("HERE2")
+            startTimer()
+        } else {
+            console.log("HERE3")
+            resumeTimer();
+        }
     }
 }
 
 function stopTimer() {
+    console.log("Stopping timer")
     current_state = states.stopped;
+    stopped_timer_remaining_millis = getRemainingMillis()
     window.clearInterval(timer);
+}
+
+function startTimer() {
+    console.log("Starting timer")
+    updateCurrentTimerDate();
+    current_state = states.running
+    window.clearInterval(timer);
+    timer = window.setInterval(tick, 1000);
+}
+
+function resumeTimer() {
+    console.log("Resuming timer")
+    current_state = states.running
+    var d = new Date();
+    current_timer_date.setTime(d.getTime() + stopped_timer_remaining_millis)
+    window.clearInterval(timer);
+    timer = window.setInterval(tick, 1000);
 }
 
 function updateCurrentTimerDate() {
     var time_val = $("#txtStartTimerInput").val();
     var miltime = new RegExp("^([01]?[0-9]|2[0-3]):([0-5][0-9])$")
     var time = new RegExp("^(0?[0-9]|1[0-2]):([0-5][0-9]) *(am|pm)$")
-    var duration = new RegExp("^(\\d+) *([Ss]|[Mm]|[Hh]).*$")
+    var duration = new RegExp("^(\\d+) *([Ss]?|[Mm]?|[Hh]?).*$")
     var result = undefined
     var type = undefined
     var newDate = undefined
@@ -70,14 +115,7 @@ function updateCurrentTimerDate() {
     }
 
     console.log("Setting current timer date: "+newDate)
-    currentTimerDate = newDate;
-    startTimer();
-}
-
-function startTimer() {
-    current_state = states.running
-    window.clearInterval(timer);
-    timer = window.setInterval(tick, 1000);
+    current_timer_date = newDate;
 }
 
 function tick() {
@@ -99,7 +137,7 @@ function timerEnd() {
 }
 
 function getRemainingMillis() {
-    return currentTimerDate.getTime() - new Date().getTime();
+    return current_timer_date.getTime() - new Date().getTime();
 }
 
 function millisToHoursMinutesSeconds(millis) {
@@ -159,19 +197,20 @@ function getDateFromDurationResults(val) {
     var d = new Date();
 
     // get first character of duration part to figure if seconds, minutes, or hours
+    // If no character, assume minutes
     var duration_type = val[2].charAt(0).toLowerCase();
     switch (duration_type) {
         case "s":
             console.log("seconds")
             d.setSeconds(d.getSeconds() + parseInt(val[1]));
             break;
-        case "m":
-            console.log("minutes")
-            d.setMinutes(d.getMinutes() + parseInt(val[1]));
-            break;
         case "h":
             console.log("hours")
             d.setHours(d.getHours() + parseInt(val[1]));
+            break;
+        default:
+            console.log("minutes")
+            d.setMinutes(d.getMinutes() + parseInt(val[1]));
             break;
     }
 
@@ -196,53 +235,54 @@ function convertResultsToMilitary(val) {
 }
 
 function setupTouchBar() {
+    console.log("Setting up touch bar")
     var threeMinutes = new TouchBarButton({
         label: '3 Minutes',
         click: () => {
             $("#txtStartTimerInput").val("3 Minutes");
-            updateCurrentTimerDate();
+            startTimer();
         }
     })
     var fiveMinutes = new TouchBarButton({
         label: '5 Minutes',
         click: () => {
             $("#txtStartTimerInput").val("5 Minutes");
-            updateCurrentTimerDate();
+            startTimer();
         }
     })
     var tenMinutes = new TouchBarButton({
         label: '10 Minutes',
         click: () => {
             $("#txtStartTimerInput").val("10 Minutes");
-            updateCurrentTimerDate();
+            startTimer();
         }
     })
     var thirtyMinutes = new TouchBarButton({
         label: '30 Minutes',
         click: () => {
             $("#txtStartTimerInput").val("30 Minutes");
-            updateCurrentTimerDate();
+            startTimer();
         }
     })
     var oneHour = new TouchBarButton({
         label: '1 Hour',
         click: () => {
             $("#txtStartTimerInput").val("1 Hour");
-            updateCurrentTimerDate();
+            startTimer();
         }
     })
     var twoHours = new TouchBarButton({
         label: '2 Hours',
         click: () => {
             $("#txtStartTimerInput").val("2 Hours");
-            updateCurrentTimerDate();
+            startTimer();
         }
     })
     var fourHours = new TouchBarButton({
         label: '4 Hours',
         click: () => {
             $("#txtStartTimerInput").val("4 Hours");
-            updateCurrentTimerDate();
+            startTimer();
         }
     })
     var touchBar = new TouchBar([

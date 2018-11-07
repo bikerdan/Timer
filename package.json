@@ -29,7 +29,7 @@
         ]
       },
       "electronPackagerConfig": {
-        "icon":"resources/icons/mac/icon.icns",
+        "icon": "resources/icons/mac/icon.icns",
         "packageManager": "npm"
       },
       "electronWinstallerConfig": {
