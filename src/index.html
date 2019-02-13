@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>Timer</title>
+
     <style>
         body {
             background: black;
@@ -24,6 +25,12 @@
         #inputForm {
             text-align: center;
         }
+        .show {
+            display: inline;
+        }
+        .hide {
+            display: none;
+        }
     </style>
     <script>
         window.nodeRequire = require;
@@ -36,8 +43,8 @@
   <body style="-webkit-app-region: drag">
     <div id="inputForm">
         <input type="text" placeholder="30m, 1 Hour, 12:30pm, 18:00" id="txtStartTimerInput"/>
-        <input type="button" id="btnStartNewTimer" value="Go" />
-        <input type="button" id="btnStopTimer" value="Stop" />
+        <input type="button" id="btnStartPauseResume" value="Start" />
+        <input type="button" id="btnCancel" value="Cancel" class="hide"/>
     </div>
     <div class="timer" id="lblTimer">00:00:00</div>
     <script src="renderer.js"></script>

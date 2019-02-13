@@ -4,16 +4,19 @@ const {app, TouchBar} = remote
 const {TouchBarLabel, TouchBarButton, TouchBarSpacer} = TouchBar
 const default_msg = "00:00:00"
 const done_msg = "DONE!!!!"
+const start_btn = "Start"
+const pause_btn = "Pause"
+const resume_btn = "Resume"
+
 
 var current_timer_date = undefined;
-var stopped_timer_remaining_millis = undefined;
+var paused_timer_remaining_millis = undefined;
 var timer = undefined;
 var states = {
     "initial": 0,
     "running": 1,
-    "stopped": 2,
-    "done": 3,
-    "reset": 4
+    "paused": 2,
+    "done": 3
 }
 var current_state = states.initial;
 
@@ -22,17 +25,76 @@ $(document).ready(function(){
 })
 
 function initHandlers() {
-    $("#btnStartNewTimer").click(handleStartTimerButtonClick)
-    $("#btnStopTimer").click(handleStopTimerButtonClick)
+    $("#btnStartPauseResume").click(handleStartPauseResumeButtonClick)
+    $("#btnCancel").click(handleCancelButtonClick)
+    $("#txtStartTimerInput").change(handleTimerInputChange); 
     $(document).keypress(handleKeypress)
     app.on('browser-window-blur', handleWindowBlur)
     app.on('browser-window-focus', handleWindowFocus)
 }
 
+function handleStartPauseResumeButtonClick(event, window) {
+    $("#btnStartPauseResume").blur();
+    $("#btnCancel").blur();
+    if (current_state == states.running) {
+        pauseTimer();
+    } else if (current_state == states.initial) {
+        startTimer();
+    } else if (current_state == states.paused) {
+        resumeTimer();
+    }
+}
+
+function handleCancelButtonClick(event, window) {
+    $("#btnStartPauseResume").blur();
+    $("#btnCancel").blur();
+    cancelTimer();
+}
+
+function handleTimerInputChange(event, window) {
+    
+}
+
+function handleKeypress(e) {
+    console.log("Keypressed: "+e.key+" - Current state: "+current_state);
+    if (e.key == "Enter") {
+        if (current_state == states.running) {
+            pauseTimer();
+        } else if (current_state == states.done || current_state == states.initial) {
+            startTimer()
+        } else {
+            resumeTimer();
+        }
+    }
+    if (e.key == "s") {
+        if (current_state == states.done || current_state == states.initial) {
+            startTimer()
+        } else {
+            resumeTimer();
+        }   
+    }
+    if (e.key == "p") {
+        if (current_state == states.running) {
+            pauseTimer();
+        }
+    }
+    if (e.key == "r") {
+        if (current_state == states.paused) {
+            resumeTimer();
+        }
+    }
+    if (e.key == "c") {
+        if (current_state == states.paused || current_state == states.running) {
+            cancelTimer();
+            e.preventDefault();
+        }
+    }
+}
+
 function handleWindowBlur(event, window) {
     if (current_state == states.done) {
         app.dock.bounce('critical')
-        current_state = states.reset;
+        current_state = states.initial;
     }
 }
 
@@ -41,58 +103,55 @@ function handleWindowFocus(event, window) {
     $("#txtStartTimerInput").select(); 
 }
 
-function handleStartTimerButtonClick(event, window) {
-    startTimer();
-    $("#btnStartNewTimer").blur();
-}
-
-function handleStopTimerButtonClick(event, window) {
-    stopTimer();
-    $("#btnStopTimer").blur();
-}
-
-function handleKeypress(e) {
-    console.log("Keypressed: "+e.key+" - Current state: "+current_state)
-    if (e.key == "Enter") {
-        if (current_state == states.running) {
-            stopTimer();
-        } else if (current_state == states.done || current_state == states.initial) {
-            startTimer()
-        } else {
-            resumeTimer();
-        }
+function startTimer() {
+    console.log("Starting timer")
+    if (updateCurrentTimerDate()) {
+        current_state = states.running
+        window.clearInterval(timer);
+        timer = window.setInterval(tick, 200);
+        $("#btnStartPauseResume").prop('value', pause_btn);
+        $("#txtStartTimerInput").prop("readonly", true);
+        showCancelButton();    
     }
 }
 
-function stopTimer() {
-    console.log("Stopping timer")
-    current_state = states.stopped;
-    stopped_timer_remaining_millis = getRemainingMillis()
+function pauseTimer() {
+    console.log("Pausing timer")
+    current_state = states.paused;
+    paused_timer_remaining_millis = getRemainingMillis()
     window.clearInterval(timer);
-}
-
-function startTimer() {
-    console.log("Starting timer")
-    updateCurrentTimerDate();
-    current_state = states.running
-    window.clearInterval(timer);
-    timer = window.setInterval(tick, 1000);
+    $("#btnStartPauseResume").prop('value', resume_btn);
+    showCancelButton();
 }
 
 function resumeTimer() {
     console.log("Resuming timer")
     current_state = states.running
     var d = new Date();
-    current_timer_date.setTime(d.getTime() + stopped_timer_remaining_millis)
+    current_timer_date.setTime(d.getTime() + paused_timer_remaining_millis)
     window.clearInterval(timer);
-    timer = window.setInterval(tick, 1000);
+    timer = window.setInterval(tick, 200);
+    $("#btnStartPauseResume").prop('value', pause_btn);
+    showCancelButton();
+}
+
+function cancelTimer() {
+    $("#btnStartPauseResume").prop('value', start_btn);
+    hideCancelButton();
+    current_state = states.initial;
+    window.clearInterval(timer);
+    current_timer_date = undefined;
+    paused_timer_remaining_millis = undefined;
+    timer = undefined;
+    $("#txtStartTimerInput").prop("readonly", false);
+    $("#lblTimer").text(default_msg);
 }
 
 function updateCurrentTimerDate() {
     var time_val = $("#txtStartTimerInput").val();
-    var miltime = new RegExp("^([01]?[0-9]|2[0-3]):([0-5][0-9])$")
-    var time = new RegExp("^(0?[0-9]|1[0-2]):([0-5][0-9]) *(am|pm)$")
-    var duration = new RegExp("^(\\d+) *([Ss]?|[Mm]?|[Hh]?).*$")
+    var miltime = new RegExp("^([01]?[0-9]|2[0-3]):([0-5][0-9])$");
+    var time = new RegExp("^(0?[0-9]|1[0-2]):([0-5][0-9]) *(a|p)m?$");
+    var duration = new RegExp("^(\\d+) *([Ss]?|[Mm]?|[Hh]?)?.*$");
     var result = undefined
     var type = undefined
     var newDate = undefined
@@ -108,11 +167,13 @@ function updateCurrentTimerDate() {
         newDate = getDateFromDurationResults(result)
     } else {
         alert("Invalid format.  Please use something like the following:  2m, 2 minutes, 30 seconds, 23:30, 12:00pm")
-        return;
+        cancelTimer();
+        return false;
     }
 
     console.log("Setting current timer date: "+newDate)
     current_timer_date = newDate;
+    return true;
 }
 
 function tick() {
@@ -126,11 +187,17 @@ function tick() {
 }
 
 function timerEnd() {
-    window.clearInterval(timer);
     app.focus();
-    $("#lblTimer").text(done_msg);
     current_state = states.done
-    window.setTimeout(() =>current_state = states.reset, 3000)
+    $("#btnStartPauseResume").prop('value', start_btn);
+    hideCancelButton();
+    $("#lblTimer").text(done_msg);
+    window.clearInterval(timer);
+    window.setTimeout(() =>current_state = states.initial, 3000)
+    current_timer_date = undefined;
+    paused_timer_remaining_millis = undefined;
+    timer = undefined;
+    $("#txtStartTimerInput").prop("readonly", false);
 }
 
 function getRemainingMillis() {
@@ -142,7 +209,7 @@ function millisToHoursMinutesSeconds(millis) {
     var minutes = 0;
     var hours = 0;
 
-    seconds = millis / 1000;
+    seconds = Math.floor(millis / 1000);
 
     minutes = Math.floor(seconds / 60);
     seconds = Math.floor(seconds - (minutes * 60));
@@ -294,6 +361,16 @@ function setupTouchBar() {
         new TouchBarSpacer({size: 'flexible'}),
     ])
     remote.getCurrentWindow().setTouchBar(touchBar)
+}
+
+function showCancelButton() {
+    $("#btnCancel").addClass("show");
+    $("#btnCancel").removeClass("hide");
+}
+
+function hideCancelButton() {
+    $("#btnCancel").addClass("hide");
+    $("#btnCancel").removeClass("show");
 }
 
 window.onload = function() {
