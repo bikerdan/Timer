@@ -21,9 +21,14 @@
         }
         #txtStartTimerInput {
             width: 200px;
+            font-size: 10pt;
         }
         #inputForm {
             text-align: center;
+        }
+        .btn {
+            width: 70px;
+            font-size: 18px;
         }
         .show {
             display: inline;
@@ -43,8 +48,8 @@
   <body style="-webkit-app-region: drag">
     <div id="inputForm">
         <input type="text" placeholder="30m, 1 Hour, 12:30pm, 18:00" id="txtStartTimerInput"/>
-        <input type="button" id="btnStartPauseResume" value="Start" />
-        <input type="button" id="btnCancel" value="Cancel" class="hide"/>
+        <input type="button" class="btn" id="btnStartPauseResume" value="Start" />
+        <input type="button" class="hide btn" id="btnCancel" value="Cancel"/>
     </div>
     <div class="timer" id="lblTimer">00:00:00</div>
     <script src="renderer.js"></script>

@@ -66,24 +66,7 @@ function handleKeypress(e) {
             resumeTimer();
         }
     }
-    if (e.key == "s") {
-        if (current_state == states.done || current_state == states.initial) {
-            startTimer()
-        } else {
-            resumeTimer();
-        }   
-    }
-    if (e.key == "p") {
-        if (current_state == states.running) {
-            pauseTimer();
-        }
-    }
-    if (e.key == "r") {
-        if (current_state == states.paused) {
-            resumeTimer();
-        }
-    }
-    if (e.key == "c") {
+    if (e.key == "x") {
         if (current_state == states.paused || current_state == states.running) {
             cancelTimer();
             e.preventDefault();
@@ -262,7 +245,12 @@ function getDateFromDurationResults(val) {
 
     // get first character of duration part to figure if seconds, minutes, or hours
     // If no character, assume minutes
-    var duration_type = val[2].charAt(0).toLowerCase();
+    var duration_type = undefined;
+    if (val[2]) {
+        duration_type = val[2].charAt(0).toLowerCase();
+    } else {
+        duration_type = "m";
+    }
     switch (duration_type) {
         case "s":
             console.log("seconds")
@@ -288,11 +276,11 @@ function getDateFromDurationResults(val) {
  */
 function convertResultsToMilitary(val) {
 
-    if (val[3] == "am" && val[1] == 12) { // 12 am means midnight or 00 military time
+    if (val[3] == "a" && val[1] == 12) { // 12 am means midnight or 00 military time
         val[1] = 0
-    } else if (val[3] == "pm" && val[1] == 12) { // 12 pm means 12 military time, do nothing
+    } else if (val[3] == "p" && val[1] == 12) { // 12 pm means 12 military time, do nothing
         // Do nothing
-    } else if (val[3] == "pm") { // any other pm time needs 12 added
+    } else if (val[3] == "p") { // any other pm time needs 12 added
         val[1] = parseInt(val[1]) + 12;
     }
     return val;
